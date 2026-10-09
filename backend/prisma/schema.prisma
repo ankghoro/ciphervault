@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  credentials  Credential[]
+  groups       Group[]
+  categories   Category[]
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  color       String       @default("#6366f1")
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  purgedAt    DateTime?
+  credentials Credential[]
+
+  @@index([userId, deletedAt])
+}
+
+model Group {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      Group?       @relation("GroupTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Group[]      @relation("GroupTree")
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  purgedAt    DateTime?
+  credentials Credential[]
+
+  @@index([userId, deletedAt])
+  @@index([parentId])
+}
+
+model Credential {
+  id                String    @id @default(cuid())
+  title             String
+  username          String?
+  // AES-256-GCM encrypted password: iv:authTag:ciphertext (hex)
+  encryptedPassword String
+  url               String?
+  notes             String?
+  categoryId        String?
+  category          Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  groupId           String?
+  group             Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  purgedAt          DateTime?
+
+  @@index([userId, deletedAt])
+  @@index([categoryId])
+  @@index([groupId])
+}
